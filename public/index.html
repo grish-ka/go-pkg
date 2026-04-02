@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Matrix Builder</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --accent: #2f81f7; --text: #e6edf3; --muted: #8b949e; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 40px 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 800px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { margin: 0 0 30px 0; font-size: 24px; color: var(--accent); font-weight: 600; }
+        .field { margin-bottom: 25px; }
+        label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; }
+        input { background: var(--bg); border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; outline: none; transition: 0.2s; }
+        input:focus { border-color: var(--accent); }
+        .row { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; }
+        .row input { flex: 1; }
+        .btn { cursor: pointer; border-radius: 6px; font-weight: 600; padding: 10px 20px; border: 1px solid var(--border); background: #21262d; color: var(--text); transition: 0.2s; }
+        .btn:hover { background: #30363d; border-color: #8b949e; }
+        .preview-area { margin-top: 40px; border-top: 1px solid var(--border); padding-top: 30px; text-align: center; }
+        .badge-wrap { background: #010409; padding: 30px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; display: inline-block; }
+        .link-out { background: #000; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #7ee787; word-break: break-all; border: 1px solid var(--border); text-align: left; }
+        .del { color: #f85149; background: none; border: none; cursor: pointer; font-size: 20px; padding: 0 10px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Matrix Builder</h1>
+    <div class="field">
+        <label>Project Title</label>
+        <input type="text" id="title" value="go-pkg" oninput="update()">
+    </div>
+    <div class="field">
+        <label>Latest Version (Auto-detected)</label>
+        <input type="text" id="latest" value="" readonly style="opacity: 0.6; cursor: not-allowed;">
+    </div>
+    <div class="field">
+        <label>Managers</label>
+        <div id="list">
+            <div class="row">
+                <input type="text" class="mgr" placeholder="arch" oninput="update()">
+                <input type="text" class="ver" placeholder="0.1.0" oninput="update()">
+                <button class="del" onclick="this.parentElement.remove(); update()">×</button>
+            </div>
+        </div>
+        <button class="btn" style="color:var(--accent)" onclick="addRow()">+ Add Manager</button>
+    </div>
+    <div class="preview-area">
+        <label>Preview</label>
+        <div class="badge-wrap" id="view"></div>
+        <label>Generated Data URL</label>
+        <div class="link-out" id="url"></div>
+        <button class="btn" style="margin-top:15px" onclick="copy()">Copy Link</button>
+    </div>
+</div>
+<script>
+    function addRow() {
+        const div = document.createElement('div'); div.className = 'row';
+        div.innerHTML = '<input type="text" class="mgr" placeholder="Manager" oninput="update()"><input type="text" class="ver" placeholder="Version" oninput="update()"><button class="del" onclick="this.parentElement.remove(); update()">×</button>';
+        document.getElementById('list').appendChild(div); update();
+    }
+
+    function update() {
+        const title = document.getElementById('title').value;
+        const rows = document.querySelectorAll('.row');
+        const latestInput = document.getElementById('latest');
+        
+        let versions = [];
+        rows.forEach(r => {
+            const v = r.querySelector('.ver').value.trim();
+            if (v) versions.push(v);
+        });
+
+        if (versions.length > 0) {
+            versions.sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }));
+            latestInput.value = versions[0];
+        } else {
+            latestInput.value = "";
+        }
+
+        const latest = latestInput.value.trim();
+        let data = []; 
+        
+        rows.forEach(r => {
+            const m = r.querySelector('.mgr').value.trim();
+            const v = r.querySelector('.ver').value.trim();
+            if (m && v) {
+                const state = (v === latest) ? "u" : "n";
+                data.push(m + ":" + v + "-" + state);
+            }
+        });
+
+        const url = window.location.origin + "/api?project=" + encodeURIComponent(title) + "&data=" + encodeURIComponent(data.join(","));
+        document.getElementById('view').innerHTML = '<img src="' + url + '" alt="badge matrix">';
+        document.getElementById('url').innerText = url;
+    }
+
+    function copy() { navigator.clipboard.writeText(document.getElementById('url').innerText); alert("Copied!"); }
+    update();
+</script>
+</body>
+</html>
